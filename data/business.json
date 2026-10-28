@@ -1,0 +1,37 @@
+{
+  "name": "Ruta Rent a Car",
+  "description": "Fictional car rental company in Buenos Aires used as the demo business for this starter kit.",
+  "currency": "ARS",
+  "timezone": "America/Argentina/Buenos_Aires",
+  "hours": "Monday to Saturday, 8:00 to 20:00. Closed on Sundays and public holidays.",
+  "branches": [
+    {"id": "palermo", "name": "Palermo", "address": "Av. Santa Fe 3500, CABA"},
+    {"id": "aeroparque", "name": "Aeroparque", "address": "Av. Costanera Rafael Obligado s/n, CABA"}
+  ],
+  "requirements": [
+    "Minimum age: 21 years",
+    "Driver's license valid for at least 2 years",
+    "ID or passport",
+    "Credit card in the driver's name for the security deposit"
+  ],
+  "rules": {
+    "min_days": 1,
+    "max_days": 30,
+    "max_days_ahead": 180,
+    "weekly_discount_percent": 10,
+    "security_deposit": 250000,
+    "km_included_per_day": 300
+  },
+  "extras": {
+    "child_seat": {"name": "Child seat", "price_per_day": 6000},
+    "additional_driver": {"name": "Additional driver", "price_per_day": 9000},
+    "gps": {"name": "GPS", "price_per_day": 4000}
+  },
+  "cars": [
+    {"id": "fiat-mobi", "name": "Fiat Mobi", "category": "economy", "seats": 4, "transmission": "manual", "price_per_day": 42000, "units": 3},
+    {"id": "vw-polo", "name": "Volkswagen Polo", "category": "compact", "seats": 5, "transmission": "manual", "price_per_day": 55000, "units": 3},
+    {"id": "toyota-yaris", "name": "Toyota Yaris", "category": "compact", "seats": 5, "transmission": "automatic", "price_per_day": 64000, "units": 2},
+    {"id": "jeep-renegade", "name": "Jeep Renegade", "category": "suv", "seats": 5, "transmission": "automatic", "price_per_day": 89000, "units": 2},
+    {"id": "toyota-hiace", "name": "Toyota Hiace", "category": "van", "seats": 12, "transmission": "manual", "price_per_day": 135000, "units": 1}
+  ]
+}

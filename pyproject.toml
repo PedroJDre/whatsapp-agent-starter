@@ -1,0 +1,36 @@
+[project]
+name = "whatsapp-agent-starter"
+version = "0.1.0"
+description = "Production-ready WhatsApp business assistant built with LangChain: tools, guardrails in code and human handoff."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "httpx>=0.28.1",
+    "langchain>=1.4.7",
+    "langchain-anthropic>=1.7.7",
+    "pydantic-settings>=2.16.2",
+    "python-multipart>=0.0.32",
+    "tzdata>=2026.6",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/main.py" = ["E501"]  # inline dashboard HTML

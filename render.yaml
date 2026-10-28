@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: whatsapp-agent-starter
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: MODEL
+        value: anthropic:claude-sonnet-5-5
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        generateValue: true
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: HUMAN_NOTIFY_NUMBER
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
