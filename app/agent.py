@@ -1,5 +1,6 @@
 """The bot: one call per incoming message. Model + tools + code guardrails + human handoff."""
 
+import logging
 from collections.abc import Callable
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -12,6 +13,8 @@ from app.business import Business
 from app.db import Database
 from app.guardrails import unverified_amounts, wants_human
 from app.tools import TOOLS, Context
+
+log = logging.getLogger("bot")
 
 # Fixed replies sent by code, not by the model. Edit them for your business.
 TEXTS = {
@@ -102,10 +105,21 @@ class Bot:
         final = next((m for m in reversed(new) if isinstance(m, AIMessage) and m.text.strip()), None)
         return (final.text.strip() if final else ""), tool_outputs
 
+    def fail_over(self, wa_id: str, reason: str) -> str | None:
+        """Something broke while answering (model or send error): hand the chat to a person.
+
+        Returns the fallback text to send, or None if a person already has the chat."""
+        if self.db.get_conversation(wa_id)["status"] == "human":
+            return None
+        return self._handoff(wa_id, reason, TEXTS["fallback"])
+
     def _handoff(self, wa_id: str, reason: str, reply: str = TEXTS["handoff"]) -> str:
         self.db.set_status(wa_id, "human", reason)
         self.db.log_event(wa_id, "handoff", reason)
         self.db.add_message(wa_id, "assistant", reply)
         if self.notify:
-            self.notify(wa_id, reason)
+            try:
+                self.notify(wa_id, reason)
+            except Exception:  # the handoff stands even if the team alert fails
+                log.exception("Could not notify the team about %s", wa_id)
         return reply

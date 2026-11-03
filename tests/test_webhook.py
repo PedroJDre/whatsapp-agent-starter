@@ -5,6 +5,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
+from app.agent import TEXTS
 from app.config import Settings
 from app.main import create_app
 from tests.conftest import ai
@@ -104,3 +105,52 @@ def test_dashboard_and_release(setup):
     r = client.post("/admin/release", data={"wa_id": "5491122223333", "token": "admin"}, follow_redirects=False)
     assert r.status_code == 303
     assert bot.db.get_conversation("5491122223333")["status"] == "bot"
+
+
+class FlakyWhatsApp(FakeWhatsApp):
+    """The first send fails (like a Graph API 5xx), the next ones work."""
+
+    def __init__(self):
+        super().__init__()
+        self.failures = 1
+
+    def send_text(self, to, text):
+        if self.failures:
+            self.failures -= 1
+            raise RuntimeError("Graph API 503")
+        super().send_text(to, text)
+
+
+def test_model_error_hands_off_instead_of_silence(setup):
+    client, wa, bot = setup()
+
+    def boom(*args, **kwargs):
+        raise TimeoutError("model timed out")
+
+    bot.agent.invoke = boom
+    raw, headers = signed(payload("hola, ¿tienen autos?"))
+    assert client.post("/webhook", content=raw, headers=headers).status_code == 200
+    conv = bot.db.get_conversation("5491122223333")
+    assert conv["status"] == "human" and "TimeoutError" in conv["handoff_reason"]
+    assert wa.sent == [("5491122223333", TEXTS["fallback"])]
+
+
+def test_send_error_hands_off_and_retries_with_fallback(make_bot):
+    wa = FlakyWhatsApp()
+    settings = Settings(whatsapp_app_secret=SECRET, whatsapp_verify_token="verify", admin_token="admin")
+    bot = make_bot(ai("¡Hola Ana!"))
+    client = TestClient(create_app(settings, bot=bot, whatsapp=wa))
+    raw, headers = signed(payload())
+    client.post("/webhook", content=raw, headers=headers)
+    assert bot.db.get_conversation("5491122223333")["status"] == "human"
+    assert wa.sent == [("5491122223333", TEXTS["fallback"])]
+
+
+def test_error_when_a_person_already_has_the_chat_sends_nothing(setup):
+    client, wa, bot = setup()
+    bot.db.get_conversation("5491122223333", "Ana")
+    bot.db.set_status("5491122223333", "human", "Customer asked for a person")
+    bot.handle = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("db locked"))
+    raw, headers = signed(payload("hola"))
+    client.post("/webhook", content=raw, headers=headers)
+    assert wa.sent == []
