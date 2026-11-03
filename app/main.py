@@ -53,6 +53,9 @@ def create_app(
     def process(msg: Incoming) -> None:
         try:
             whatsapp.mark_read(msg.message_id)
+        except Exception:  # blue ticks are nice to have; never skip the answer for them
+            log.warning("Could not mark message %s as read", msg.message_id, exc_info=True)
+        try:
             if not msg.text.strip():
                 db.get_conversation(msg.wa_id, msg.name)
                 db.add_message(msg.wa_id, "user", f"[{msg.type} message]")
@@ -63,9 +66,18 @@ def create_app(
             reply = bot.handle(msg.wa_id, msg.text, msg.name)
             if reply:
                 whatsapp.send_text(msg.wa_id, reply)
-        except Exception:
+        except Exception as exc:
+            # Meta already got its 200 and the id is marked processed, so nothing will retry this message.
+            # End in a handoff, not silence: a person takes the chat and the customer gets the fallback text.
             log.exception("Failed to process message %s", msg.message_id)
-            db.log_event(msg.wa_id, "error", f"message {msg.message_id}")
+            db.log_event(msg.wa_id, "error", f"message {msg.message_id}: {type(exc).__name__}")
+            try:
+                db.get_conversation(msg.wa_id, msg.name)
+                fallback = bot.fail_over(msg.wa_id, f"Error while answering ({type(exc).__name__})")
+                if fallback:
+                    whatsapp.send_text(msg.wa_id, fallback)
+            except Exception:
+                log.exception("Fallback for message %s also failed; the chat is waiting for a person", msg.message_id)
 
     @app.get("/health")
     def health():
